@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>FoodRush — Place Order</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        h1,h2,nav { font-family: 'Syne', sans-serif; }
+        .item-card { transition: all 0.2s; border: 2px solid transparent; }
+        .item-card.selected { border-color: #f97316; background: #fff7ed; }
+        .qty-btn { width:28px; height:28px; border-radius:50%; border:1px solid #d1d5db;
+                   background:white; cursor:pointer; font-size:16px; display:flex; align-items:center;
+                   justify-content:center; transition:all 0.15s; }
+        .qty-btn:hover { background:#f97316; color:white; border-color:#f97316; }
+        .input-field { width:100%; border:1px solid #e5e7eb; border-radius:0.5rem;
+                       padding:0.6rem 0.9rem; font-size:0.9rem; outline:none; transition:border 0.2s; }
+        .input-field:focus { border-color:#f97316; box-shadow:0 0 0 3px rgba(249,115,22,0.1); }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+
+<!-- NAVBAR -->
+<nav class="bg-white shadow-sm sticky top-0 z-50">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+        <a href="/" class="text-2xl font-black text-orange-500">🍔 FoodRush</a>
+        <div class="flex items-center gap-4">
+            <span class="text-sm text-gray-600">
+                Hi, <strong th:text="${loggedUser.name}">User</strong>
+            </span>
+            <a href="/order/my-orders" class="text-sm text-orange-500 font-semibold hover:underline">My Orders</a>
+            <a href="/user/logout" class="text-sm text-red-400 hover:underline">Logout</a>
+        </div>
+    </div>
+</nav>
+
+<div class="max-w-6xl mx-auto px-4 py-8">
+    <h1 class="text-3xl font-black text-gray-800 mb-2">Place Your Order</h1>
+    <p class="text-gray-500 mb-8 text-sm">Select items from the menu, set quantities, then confirm your order.</p>
+
+    <!-- Flash messages -->
+    <div th:if="${error}" class="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm" th:text="${error}"></div>
+
+    <form id="orderForm" th:action="@{/order/place}" method="post">
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+            <!-- ===== MENU SELECTION (left 2 cols) ===== -->
+            <div class="lg:col-span-2">
+                <h2 class="text-lg font-bold text-gray-700 mb-4">Choose Items</h2>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4" id="menuGrid">
+
+                    <div th:each="item : ${menuItems}" th:id="|card-${item.id}|"
+                         class="item-card bg-white rounded-xl p-4 shadow-sm cursor-pointer"
+                         th:data-id="${item.id}"
+                         th:data-price="${item.calculatePrice()}"
+                         th:data-name="${item.name}"
+                         onclick="toggleItem(this.dataset.id, this.dataset.price, this.dataset.name)">
+
+                        <div class="flex items-start justify-between mb-2">
+                            <div>
+                                <span class="text-xs text-orange-500 font-semibold bg-orange-50 px-2 py-0.5 rounded-full"
+                                      th:text="${item.category}"></span>
+                                <h3 class="font-bold text-gray-800 mt-1" th:text="${item.name}"></h3>
+                            </div>
+                            <span class="text-orange-600 font-bold text-sm whitespace-nowrap">
+                                Rs.<span th:text="${#numbers.formatDecimal(item.calculatePrice(),1,2)}"></span>
+                            </span>
+                        </div>
+
+                        <!-- Quantity control (hidden until item selected) -->
+                        <div th:id="|qty-row-${item.id}|" class="hidden mt-2 flex items-center gap-3">
+                            <button type="button" class="qty-btn"
+                                    th:onclick="|changeQty(${item.id}, -1); event.stopPropagation();|">-</button>
+                            <span th:id="'qty-display-' + ${item.id}" class="font-bold text-gray-700 min-w-[20px] text-center">1</span>
+                            <button type="button" class="qty-btn"
+                                    th:onclick="|changeQty(${item.id}, 1); event.stopPropagation();|">+</button>
+
+                            <!-- Hidden inputs submitted with the form -->
+                            <input type="hidden" name="itemIds" th:id="|input-id-${item.id}|"
+                                   th:value="${item.id}" disabled/>
+                            <input type="hidden" name="quantities" th:id="|input-qty-${item.id}|"
+                                   value="1" disabled/>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- ===== ORDER SUMMARY (right col) ===== -->
+            <div class="lg:col-span-1">
+                <div class="bg-white rounded-2xl shadow-sm p-6 sticky top-24">
+                    <h2 class="text-lg font-bold text-gray-800 mb-4">Order Summary</h2>
+
+                    <!-- Selected items list -->
+                    <div id="summaryList" class="space-y-2 mb-4 min-h-[60px]">
+                        <p class="text-sm text-gray-400 italic" id="emptyMsg">No items selected yet.</p>
+                    </div>
+
+                    <div class="border-t border-gray-100 pt-4 mb-4">
+                        <div class="flex justify-between items-center">
+                            <span class="font-semibold text-gray-700">Total</span>
+                            <span class="text-orange-600 font-black text-xl">
+                                Rs. <span id="totalDisplay">0.00</span>
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Delivery details -->
+                    <div class="space-y-3 mb-6">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wide">Delivery Address *</label>
+                            <textarea name="deliveryAddress" rows="2" required
+                                      class="input-field resize-none"
+                                      th:placeholder="${loggedUser.role == 'customer' ? 'Using your registered address' : 'Enter delivery address'}"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wide">Special Note</label>
+                            <input type="text" name="specialNote" placeholder="e.g. Less spicy please"
+                                   class="input-field"/>
+                        </div>
+                    </div>
+
+                    <button type="submit"
+                            class="w-full bg-orange-500 text-white font-bold py-3 rounded-xl hover:bg-orange-600 transition text-sm">
+                        Confirm Order 🛵
+                    </button>
+
+                    <a href="/" class="block text-center text-sm text-gray-400 mt-3 hover:text-orange-400">← Back to menu</a>
+                </div>
+            </div>
+
+        </div>
+    </form>
+</div>
+
+<script>
+    // Tracks selected items: { itemId: { name, price, qty } }
+    const selected = {};
+
+    function toggleItem(id, price, name) {
+        // Convert to proper types as dataset returns strings
+        id = parseInt(id);
+        price = parseFloat(price);
+        
+        const card    = document.getElementById('card-' + id);
+        const qtyRow  = document.getElementById('qty-row-' + id);
+        const inputId = document.getElementById('input-id-' + id);
+        const inputQ  = document.getElementById('input-qty-' + id);
+
+        if (selected[id]) {
+            // Deselect
+            delete selected[id];
+            card.classList.remove('selected');
+            qtyRow.classList.add('hidden');
+            inputId.disabled = true;
+            inputQ.disabled  = true;
+        } else {
+            // Select with qty = 1
+            selected[id] = { name, price, qty: 1 };
+            card.classList.add('selected');
+            qtyRow.classList.remove('hidden');
+            inputId.disabled = false;
+            inputQ.disabled  = false;
+        }
+        updateSummary();
+    }
+
+    function changeQty(id, delta) {
+        if (!selected[id]) return;
+        const newQty = selected[id].qty + delta;
+        if (newQty < 1) { toggleItem(id, selected[id].price, selected[id].name); return; }
+        selected[id].qty = newQty;
+        document.getElementById('qty-display-' + id).textContent = newQty;
+        document.getElementById('input-qty-' + id).value = newQty;
+        updateSummary();
+    }
+
+    function updateSummary() {
+        const list     = document.getElementById('summaryList');
+        const emptyMsg = document.getElementById('emptyMsg');
+        const total    = Object.values(selected).reduce((s,i) => s + i.price * i.qty, 0);
+
+        document.getElementById('totalDisplay').textContent = total.toFixed(2);
+
+        // Clear old summary items
+        list.querySelectorAll('.summary-item').forEach(el => el.remove());
+
+        const keys = Object.keys(selected);
+        emptyMsg.style.display = keys.length ? 'none' : 'block';
+
+        keys.forEach(id => {
+            const it = selected[id];
+            const div = document.createElement('div');
+            div.className = 'summary-item flex justify-between text-sm';
+            div.innerHTML = `<span class="text-gray-700">${it.name} ×${it.qty}</span>
+                             <span class="text-orange-600 font-semibold">Rs.${(it.price*it.qty).toFixed(2)}</span>`;
+            list.appendChild(div);
+        });
+    }
+</script>
+</body>
+</html>

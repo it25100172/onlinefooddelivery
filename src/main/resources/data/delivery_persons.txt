@@ -1,0 +1,5 @@
+# delivery_persons.txt — Format: id|name|email|password|phone|role|vehicleType|isAvailable|deliveriesCompleted
+1|Suresh Bandara|suresh@foodrush.com|del123|0701111111|delivery|Bike|true|34
+2|Chamara Wickrama|chamara@foodrush.com|del456|0702222222|delivery|Scooter|true|21
+3|Pradeep Kumara|pradeep@foodrush.com|del789|0703333333|delivery|Bike|false|47
+4|Tharaka Rathnayake|tharaka@foodrush.com|del321|0704444444|delivery|Car|true|12

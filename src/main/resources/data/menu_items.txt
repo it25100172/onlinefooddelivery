@@ -1,0 +1,16 @@
+# menu_items.txt
+# FoodItem  format: food|id|name|basePrice|category|available|imageUrl|cuisineType|packagingFee|isSpicy
+# Beverage  format: beverage|id|name|basePrice|category|available|imageUrl|size|isCold|hasCaffeine
+
+food|1|Chicken Kottu|450.00|Kottu|true||Sri Lankan|25.00|true
+food|2|Vegetable Fried Rice|320.00|Rice|true||Sri Lankan|20.00|false
+food|3|Beef Devilled|550.00|Devilled|true||Sri Lankan|25.00|true
+food|4|Prawn Noodles|620.00|Noodles|true||Chinese|25.00|false
+food|5|Fish Cutlets (6 pcs)|280.00|Snacks|true||Sri Lankan|15.00|false
+food|6|Chocolate Lava Cake|350.00|Dessert|true||Western|20.00|false
+food|7|Margherita Pizza|800.00|Pizza|true||Italian|30.00|false
+food|8|Mutton Biryani|680.00|Rice|true||Indian|25.00|true
+beverage|9|Mango Juice|150.00|Beverage|true||Medium|true|false
+beverage|10|Iced Coffee|200.00|Beverage|true||Medium|true|true
+beverage|11|Vanilla Milkshake|280.00|Beverage|true||Large|true|false
+beverage|12|Hot Tea|80.00|Beverage|true||Small|false|true
